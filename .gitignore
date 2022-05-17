@@ -3,3 +3,4 @@ config.env
 test.csv
 notes.md
 .env
+examples/
