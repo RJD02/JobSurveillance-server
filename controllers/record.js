@@ -4,7 +4,30 @@ const { parse } = require("csv-parse");
 const Record = require("../models/records");
 const Machine = require("../models/machine");
 const Worker = require("../models/worker");
+const ErrorResponse = require("../utils/errorResponse");
 const parser = parse({ delimiter: "," });
+
+exports.getRecords = async (req, res, next) => {
+  try {
+    const records = await Record.find();
+    if (!records) {
+      return next(new ErrorResponse("No records exist", 404));
+    }
+    const resRecords = [];
+    for (let i = 0; i < records.length; i++) {
+      let record = await records[i].populate("worker");
+      record = await record.populate("machine");
+      resRecords.push(record);
+    }
+    console.log(resRecords);
+    return res.status(201).json({
+      success: true,
+      resRecords,
+    });
+  } catch (err) {
+    return next(err);
+  }
+};
 
 exports.createRecord = async (req, res, next) => {
   const file = formidable({ multiples: true });
@@ -61,19 +84,26 @@ const storeRecord = async () => {
         const machine = await Machine.findOne({
           machineID: csvData[i]["machine"],
         });
-        const worker = await Worker.findOne({ EmpID: csvData[i]["worker"] });
-        console.log(csvData[i]);
+        let worker = await Worker.findOne({ EmpID: csvData[i]["worker"] });
+
+        const filteredLength = worker.machines.filter(
+          (val) => val.toString() === machine._id.toString()
+        ).length;
+
+        if (filteredLength === 0) {
+          worker.machines.push(machine);
+          await worker.save();
+        }
         await Record.create({
           data: Date.now(),
           worker,
           machine,
         });
-        // const machine = Machine.find({machineID: })
       }
       // Delete the csv file
       fs.unlink("../examples/first", (err) => {
-        if (err) console.log("Error deleting the file", err);
-        else console.log("Successfully deleted the file");
+        // if (err) console.log("Error deleting the file", err);
+        console.log("Successfully deleted the file");
       });
       return true;
     });

@@ -72,7 +72,7 @@ exports.updateMachine = async (req, res, next) => {
 exports.getMachine = async (req, res, next) => {
   const { id } = req.params;
   try {
-    const machine = await Machine.findOne({ id });
+    const machine = await Machine.findOne({ _id: id });
     if (!machine) {
       return next(new ErrorResponse("Machine doesn't exist"));
     }
